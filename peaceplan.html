@@ -5,21 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PeacePlan</title>
     
-	<link rel="shortcut icon" type="image/jpg" href="https://i.pinimg.com/originals/f7/d0/88/f7d088916b6c55fbfcb883309a386423.png" />
+    <link rel="shortcut icon" type="image/jpg" href="https://i.pinimg.com/originals/f7/d0/88/f7d088916b6c55fbfcb883309a386423.png" />
 
-    <!-- HTML Meta Tags -->
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="Your plan. Your flow. Your media. By Slick9000">
-
-    <!-- Facebook Meta Tags -->
     <meta property="og:url" content="https://www.slick9000.github.io/peaceplan">
     <meta property="og:type" content="website">
     <meta property="og:title" content="PeacePlan">
     <meta property="og:description" content="Your plan. Your flow. Your media. By Slick9000">
     <meta property="og:image" content="https://i.pinimg.com/originals/f7/d0/88/f7d088916b6c55fbfcb883309a386423.png">
-
-    <!-- Twitter Meta Tags -->
     <meta name="twitter:card" content="summary_large_image">
     <meta property="twitter:domain" content="slick9000.github.io">
     <meta property="twitter:url" content="https://www.slick9000.github.io/peaceplan">
@@ -27,9 +20,6 @@
     <meta name="twitter:description" content="Your plan. Your flow. Your media. By Slick9000">
     <meta name="twitter:image" content="https://i.pinimg.com/originals/f7/d0/88/f7d088916b6c55fbfcb883309a386423.png">
 
-    <!-- Meta Tags Generated via https://www.opengraph.xyz -->
-	
-</head>
     <style>
         body {
             font-family: monospace;
@@ -45,6 +35,9 @@
             overflow: hidden;
             border: 2px solid #6a0dad;
             position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         .node {
             position: absolute;
@@ -95,10 +88,18 @@
             z-index: -1;
             display: none;
         }
+        #welcomeMessage {
+            position: absolute;
+            color: white;
+            font-size: 24px;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
-    <div id="canvas"></div>
+    <div id="canvas">
+        <div id="welcomeMessage">Double click to get started!</div>
+    </div>
     <div class="comment-section" id="commentSection">
         <h3>Node Details</h3>
         <input type="text" id="nodeNameInput" placeholder="Node Name" />
@@ -136,6 +137,7 @@
     <script>
         let nodes = [];
         const canvas = document.getElementById('canvas');
+        const welcomeMessage = document.getElementById('welcomeMessage');
         const commentSection = document.getElementById('commentSection');
         const nodeNameInput = document.getElementById('nodeNameInput');
         const commentInput = document.getElementById('commentInput');
@@ -181,6 +183,7 @@
 
             canvas.appendChild(node);
             nodes.push({ x, y, color: node.style.backgroundColor, name: node.innerText, comment: comment || '', element: node });
+            welcomeMessage.style.display = 'none'; // Hide welcome message after creating the first node
         }
 
         function updateNodePosition(node) {
