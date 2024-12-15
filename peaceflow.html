@@ -3,21 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PeacePlan</title>
-    
+    <title>PeaceFlow</title>
     <link rel="shortcut icon" type="image/jpg" href="https://i.pinimg.com/originals/f7/d0/88/f7d088916b6c55fbfcb883309a386423.png" />
-
-    <meta name="description" content="Your plan. Your flow. Your media. By Slick9000">
-    <meta property="og:url" content="https://www.slick9000.github.io/peaceplan">
+    <meta name="description" content="Your peace. Your flow. Your media. By Slick9000">
+    <meta property="og:url" content="https://www.slick9000.github.io/peaceflow">
     <meta property="og:type" content="website">
-    <meta property="og:title" content="PeacePlan">
-    <meta property="og:description" content="Your plan. Your flow. Your media. By Slick9000">
+    <meta property="og:title" content="PeaceFlow">
+    <meta property="og:description" content="Your peace. Your flow. Your media. By Slick9000">
     <meta property="og:image" content="https://i.pinimg.com/originals/f7/d0/88/f7d088916b6c55fbfcb883309a386423.png">
     <meta name="twitter:card" content="summary_large_image">
     <meta property="twitter:domain" content="slick9000.github.io">
-    <meta property="twitter:url" content="https://www.slick9000.github.io/peaceplan">
-    <meta name="twitter:title" content="PeacePlan">
-    <meta name="twitter:description" content="Your plan. Your flow. Your media. By Slick9000">
+    <meta property="twitter:url" content="https://www.slick9000.github.io/peaceflow">
+    <meta name="twitter:title" content="PeaceFlow">
+    <meta name="twitter:description" content="Your peace. Your flow. Your media. By Slick9000">
     <meta name="twitter:image" content="https://i.pinimg.com/originals/f7/d0/88/f7d088916b6c55fbfcb883309a386423.png">
 
     <style>
@@ -29,6 +27,7 @@
             display: flex;
             height: 100vh;
             overflow: hidden;
+            position: relative;
         }
         #canvas {
             flex: 1;
@@ -48,17 +47,17 @@
             cursor: move;
             user-select: none;
         }
-        .comment-section {
+        .label-section {
             width: 250px;
             background-color: #000000; 
             padding: 10px;
             display: block;
             transition: background-color 0.3s;
         }
-        .comment-section.hidden {
+        .label-section.hidden {
             display: none;
         }
-        .comment-section input, .comment-section textarea {
+        .label-section input, .label-section textarea {
             width: 100%;
             background-color: #6a0dad;
             color: white;
@@ -67,11 +66,19 @@
             padding: 5px;
             font-size: 12px;
         }
+        .media-section {
+            display: flex;
+            flex-direction: column;
+        }
+        .media-section textarea {
+            resize: vertical;
+            height: 50px;
+        }
         .instructions, .label {
             font-size: 12px;
             margin-top: 5px;
         }
-        .reset-button {
+        .reset-button, .load-media-button {
             margin-top: 10px;
             padding: 5px;
             background-color: #ff4d4d;
@@ -79,7 +86,7 @@
             color: white;
             cursor: pointer;
         }
-        #videoBackground {
+        #videoBackground, #imageBackground {
             position: absolute;
             top: 0;
             left: 0;
@@ -87,6 +94,8 @@
             height: 100%;
             z-index: -1;
             display: none;
+            background-size: cover;
+            background-position: center;
         }
         #welcomeMessage {
             position: absolute;
@@ -98,21 +107,23 @@
 </head>
 <body>
     <div id="canvas">
-        <div id="welcomeMessage">PeacePlan<br><br><br>Double click to get started!</div>
+        <div id="welcomeMessage">PeaceFlow<br><br><br>Double click to get started!</div>
     </div>
-    <div class="comment-section" id="commentSection">
-        <h3>Node Details</h3>
-        <input type="text" id="nodeNameInput" placeholder="Node Name" />
-        <textarea id="commentInput" placeholder="Add comments here... (or a YouTube link)"></textarea>
-        <div class="instructions">
-            Instructions:<br>
-            - Double-click to create a new node.<br>
-            - Left-click a node to edit it.<br>
-            - Left-click again to close the sidebar.<br>
-            - Left-click and drag to move nodes around.<br>
-            - Right-click a node to delete it.<br>
-            - Middle-click a node to pause/play video if playing a YouTube link.<br>
+    <div class="label-section" id="labelSection">
+        <h3>Node Label</h3>
+        <input type="text" id="nodeLabelInput" placeholder="Node Label" />
+        <div class="comments-section">
+            <h4>Comments</h4>
+            <textarea id="nodeCommentsInput" placeholder="Add your comments here..."></textarea>
+            <input type="checkbox" id="toggleCommentsTitle">
         </div>
+		<br>
+        <div class="media-section">
+            <label class="label" for="mediaUrl">Media (YouTube/Img/GIF URL):</label>
+            <textarea id="mediaUrl" placeholder="Paste YouTube/Img/GIF URL here..."></textarea>
+            <button class="load-media-button" id="loadMediaButton">Load Media</button>
+        </div>
+		<br>
         <div class="color-picker">
             <label class="label" for="nodeColor">Node Background Color:</label>
             <input type="color" id="nodeColor" value="#6a0dad">
@@ -133,17 +144,21 @@
     </div>
 
     <iframe id="videoBackground" src="" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+    <div id="imageBackground"></div>
 
     <script>
         let nodes = [];
         const canvas = document.getElementById('canvas');
         const welcomeMessage = document.getElementById('welcomeMessage');
-        const commentSection = document.getElementById('commentSection');
-        const nodeNameInput = document.getElementById('nodeNameInput');
-        const commentInput = document.getElementById('commentInput');
+        const labelSection = document.getElementById('labelSection');
+        const nodeLabelInput = document.getElementById('nodeLabelInput');
+        const nodeCommentsInput = document.getElementById('nodeCommentsInput');
+        const mediaUrlInput = document.getElementById('mediaUrl');
+        const toggleCommentsTitle = document.getElementById('toggleCommentsTitle');
         let selectedNode = null;
         const videoBackground = document.getElementById('videoBackground');
-        let videoPlaying = false;
+        const imageBackground = document.getElementById('imageBackground');
+        let player; // For YouTube player API
 
         const defaultColors = {
             nodeColor: '#6a0dad',
@@ -152,7 +167,7 @@
             textColor: '#ffffff'
         };
 
-        function createNode(x, y, color, name, comment) {
+        function createNode(x, y, color, name, comments) {
             const node = document.createElement('div');
             node.classList.add('node');
             node.style.left = `${x}px`;
@@ -177,12 +192,8 @@
                 selectNode(node);
             });
 
-            node.addEventListener('mousedown', (e) => {
-                if (e.button === 1) toggleVideo(node);
-            });
-
             canvas.appendChild(node);
-            nodes.push({ x, y, color: node.style.backgroundColor, name: node.innerText, comment: comment || '', element: node });
+            nodes.push({ x, y, color: node.style.backgroundColor, name: node.innerText, comments: comments || '', element: node });
             welcomeMessage.style.display = 'none'; // Hide welcome message after creating the first node
         }
 
@@ -203,24 +214,24 @@
                     closeSidebar();
                 }
                 selectedNode = node;
-                nodeNameInput.value = node.innerText;
-                commentInput.value = node.comment || '';
-                commentSection.classList.remove('hidden');
+                nodeLabelInput.value = node.innerText; // Load the label here
+                nodeCommentsInput.value = nodes.find(n => n.element === node).comments; // Load comments
+                labelSection.classList.remove('hidden');
                 document.getElementById('nodeColor').value = rgbToHex(node.style.backgroundColor);
-                checkForVideoLink(node.comment);
+                toggleCommentsTitle.checked = false; // Reset checkbox
+                updateNodeTitleDisplay();
             }
         }
 
         function closeSidebar() {
             if (selectedNode) {
-                commentSection.classList.add('hidden');
+                labelSection.classList.add('hidden');
                 selectedNode = null;
             }
         }
 
         function deleteNode(node) {
             if (node === selectedNode) {
-                stopVideoBackground();
                 closeSidebar();
             }
             nodes = nodes.filter(n => n.element !== node);
@@ -228,28 +239,44 @@
             saveToLocalStorage();
         }
 
-        nodeNameInput.addEventListener('input', () => {
+        nodeLabelInput.addEventListener('input', () => {
             if (selectedNode) {
-                selectedNode.innerText = nodeNameInput.value;
+                selectedNode.innerText = nodeLabelInput.value;
                 const index = nodes.findIndex(n => n.element === selectedNode);
                 if (index !== -1) {
-                    nodes[index].name = nodeNameInput.value;
+                    nodes[index].name = nodeLabelInput.value;
                     saveToLocalStorage();
                 }
             }
         });
 
-        commentInput.addEventListener('input', () => {
+        nodeCommentsInput.addEventListener('input', () => {
             if (selectedNode) {
-                selectedNode.comment = commentInput.value;
                 const index = nodes.findIndex(n => n.element === selectedNode);
                 if (index !== -1) {
-                    nodes[index].comment = commentInput.value;
+                    nodes[index].comments = nodeCommentsInput.value;
                     saveToLocalStorage();
+                    updateNodeTitleDisplay(); // Update title display when comments change
                 }
-                checkForVideoLink(commentInput.value);
             }
         });
+
+        toggleCommentsTitle.addEventListener('change', () => {
+            updateNodeTitleDisplay();
+        });
+
+        function updateNodeTitleDisplay() {
+            if (selectedNode) {
+                if (toggleCommentsTitle.checked) {
+                    selectedNode.innerText = nodeCommentsInput.value || 'New Node';
+                } else {
+                    const index = nodes.findIndex(n => n.element === selectedNode);
+                    if (index !== -1) {
+                        selectedNode.innerText = nodes[index].name;
+                    }
+                }
+            }
+        }
 
         canvas.addEventListener('dblclick', (e) => {
             const rect = canvas.getBoundingClientRect();
@@ -277,7 +304,7 @@
         });
 
         document.getElementById('sidebarColor').addEventListener('input', (e) => {
-            commentSection.style.backgroundColor = e.target.value;
+            labelSection.style.backgroundColor = e.target.value;
             saveToLocalStorage();
         });
 
@@ -297,20 +324,40 @@
             document.getElementById('textColor').value = defaultColors.textColor;
 
             document.body.style.backgroundColor = defaultColors.bodyColor;
-            commentSection.style.backgroundColor = defaultColors.sidebarColor;
+            labelSection.style.backgroundColor = defaultColors.sidebarColor;
             document.body.style.color = defaultColors.textColor;
 
-            stopVideoBackground();
             saveToLocalStorage();
+        });
+
+        document.getElementById('loadMediaButton').addEventListener('click', () => {
+            const mediaUrl = mediaUrlInput.value;
+            if (mediaUrl) {
+                if (isYouTubeUrl(mediaUrl)) {
+                    const videoID = getYouTubeID(mediaUrl);
+                    videoBackground.src = `https://www.youtube.com/embed/${videoID}?autoplay=1&mute=0&controls=0&loop=1&playlist=${videoID}`;
+                    videoBackground.style.display = 'block';
+                    imageBackground.style.display = 'none';
+                    if (player) {
+                        player.loadVideoById(videoID);
+                    }
+                } else {
+                    imageBackground.style.backgroundImage = `url(${mediaUrl})`;
+                    imageBackground.style.display = 'block';
+                    videoBackground.style.display = 'none';
+                }
+                saveMediaUrl(mediaUrl);
+            }
         });
 
         function saveToLocalStorage() {
             const data = {
                 nodes: nodes,
                 bodyColor: document.body.style.backgroundColor,
-                sidebarColor: commentSection.style.backgroundColor,
+                sidebarColor: labelSection.style.backgroundColor,
                 textColor: document.body.style.color,
-                nodeColor: document.getElementById('nodeColor').value
+                nodeColor: document.getElementById('nodeColor').value,
+                mediaUrl: mediaUrlInput.value
             };
             localStorage.setItem('flowChartData', JSON.stringify(data));
         }
@@ -320,53 +367,105 @@
             if (savedData) {
                 const data = JSON.parse(savedData);
                 data.nodes.forEach(nodeData => {
-                    createNode(nodeData.x, nodeData.y, nodeData.color, nodeData.name, nodeData.comment);
+                    createNode(nodeData.x, nodeData.y, nodeData.color, nodeData.name, nodeData.comments);
                 });
                 document.body.style.backgroundColor = data.bodyColor;
-                commentSection.style.backgroundColor = data.sidebarColor;
+                labelSection.style.backgroundColor = data.sidebarColor;
                 document.body.style.color = data.textColor;
                 document.getElementById('nodeColor').value = data.nodeColor;
+                mediaUrlInput.value = data.mediaUrl;
             }
         }
 
-        window.addEventListener('load', loadFromLocalStorage);
+        function saveMediaUrl(url) {
+            localStorage.setItem('mediaUrl', url);
+        }
+
+        window.addEventListener('load', () => {
+            loadFromLocalStorage();
+            const savedMediaUrl = localStorage.getItem('mediaUrl');
+            if (savedMediaUrl) {
+                mediaUrlInput.value = savedMediaUrl;
+            }
+
+            // Load YouTube IFrame API
+            const tag = document.createElement('script');
+            tag.src = "https://www.youtube.com/iframe_api";
+            const firstScriptTag = document.getElementsByTagName('script')[0];
+            firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+        });
+
+        // Initialize YouTube player
+        function onYouTubeIframeAPIReady() {
+            player = new YT.Player('videoBackground', {
+                events: {
+                    'onReady': onPlayerReady
+                }
+            });
+        }
+
+        function onPlayerReady(event) {
+            // Player is ready
+        }
 
         function rgbToHex(rgb) {
             const result = /^rgba?\((\d+),\s*(\d+),\s*(\d+)/.exec(rgb);
             return result ? '#' + ((1 << 24) + (parseInt(result[1]) << 16) + (parseInt(result[2]) << 8) + parseInt(result[3])).toString(16).slice(1) : rgb;
         }
 
-        function checkForVideoLink(comment) {
-            const youtubeRegex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
-            const match = comment.match(youtubeRegex);
-            if (match) {
-                const videoId = match[1];
-                setVideoBackground(videoId);
-            } else if (!selectedNode) {
-                stopVideoBackground();
+        function getYouTubeID(url) {
+            const regExp = /(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^&\n]{11})/;
+            const match = url.match(regExp);
+            return match ? match[1] : null;
+        }
+
+        function isYouTubeUrl(url) {
+            return /youtube\.com|youtu\.be/.test(url);
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (!selectedNode) {
+                if (e.key === 'ArrowUp') {
+                    adjustVolume(10);
+                } else if (e.key === 'ArrowDown') {
+                    adjustVolume(-10);
+                } else if (e.key === 'ArrowRight') {
+                    seekVideo(5);
+                } else if (e.key === 'ArrowLeft') {
+                    seekVideo(-5);
+                }
+            }
+        });
+
+        function adjustVolume(amount) {
+            if (player) {
+                player.getVolume().then(volume => {
+                    const newVolume = Math.min(Math.max(volume + amount, 0), 100);
+                    player.setVolume(newVolume);
+                });
             }
         }
 
-        function setVideoBackground(videoId) {
-            videoBackground.src = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=0&controls=0&loop=1&playlist=${videoId}`;
-            videoBackground.style.display = 'block';
-            commentSection.classList.add('hidden');
-            videoPlaying = true;
-        }
-
-        function stopVideoBackground() {
-            videoBackground.style.display = 'none';
-            videoBackground.src = '';
-            videoPlaying = false;
-        }
-
-        function toggleVideo(node) {
-            if (videoPlaying) {
-                stopVideoBackground();
-            } else {
-                selectNode(node);
+        function seekVideo(seconds) {
+            if (player) {
+                player.getCurrentTime().then(currentTime => {
+                    player.seekTo(currentTime + seconds);
+                });
             }
         }
+
+        // Allow interaction with the YouTube video by clicking on the canvas background
+        canvas.addEventListener('click', (e) => {
+            if (!selectedNode) {
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+
+                // Simulate clicking the video background
+                videoBackground.style.pointerEvents = 'auto';
+                videoBackground.focus();
+            }
+        });
     </script>
 </body>
 </html>
