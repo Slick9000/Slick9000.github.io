@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HLS Stream Player</title>
+    <link href="https://vjs.zencdn.net/7.20.3/video-js.css" rel="stylesheet">
     <style>
         html, body {
             height: 100%;
@@ -20,27 +21,19 @@
 </head>
 <body>
 
-<video id="hls-video" controls></video>
+<video id="hls-video" class="video-js vjs-default-skin" controls preload="auto"></video>
 
-<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+<script src="https://vjs.zencdn.net/7.20.3/video.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/videojs-contrib-hls@latest/dist/videojs-contrib-hls.min.js"></script>
 <script>
-    var video = document.getElementById('hls-video');
-    var videoSrc = 'http://173.225.32.123/KELO-2361/playlist.m3u8';
-
-    if (Hls.isSupported()) {
-        var hls = new Hls();
-        hls.loadSource(videoSrc);
-        hls.attachMedia(video);
-        hls.on(Hls.Events.MANIFEST_PARSED, function () {
-            video.play();
-        });
-    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-        // This will play in Safari and iOS
-        video.src = videoSrc;
-        video.addEventListener('loadedmetadata', function () {
-            video.play();
-        });
-    }
+    var player = videojs('hls-video');
+    player.src({
+        src: 'http://173.225.32.123/KELO-2361/playlist.m3u8',
+        type: 'application/x-mpegURL'
+    });
+    player.ready(function() {
+        player.play();
+    });
 </script>
 
 </body>
