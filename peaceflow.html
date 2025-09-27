@@ -422,50 +422,6 @@
         function isYouTubeUrl(url) {
             return /youtube\.com|youtu\.be/.test(url);
         }
-
-        document.addEventListener('keydown', (e) => {
-            if (!selectedNode) {
-                if (e.key === 'ArrowUp') {
-                    adjustVolume(10);
-                } else if (e.key === 'ArrowDown') {
-                    adjustVolume(-10);
-                } else if (e.key === 'ArrowRight') {
-                    seekVideo(5);
-                } else if (e.key === 'ArrowLeft') {
-                    seekVideo(-5);
-                }
-            }
-        });
-
-        function adjustVolume(amount) {
-            if (player) {
-                player.getVolume().then(volume => {
-                    const newVolume = Math.min(Math.max(volume + amount, 0), 100);
-                    player.setVolume(newVolume);
-                });
-            }
-        }
-
-        function seekVideo(seconds) {
-            if (player) {
-                player.getCurrentTime().then(currentTime => {
-                    player.seekTo(currentTime + seconds);
-                });
-            }
-        }
-
-        // Allow interaction with the YouTube video by clicking on the canvas background
-        canvas.addEventListener('click', (e) => {
-            if (!selectedNode) {
-                const rect = canvas.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
-
-                // Simulate clicking the video background
-                videoBackground.style.pointerEvents = 'auto';
-                videoBackground.focus();
-            }
-        });
     </script>
 </body>
 </html>
