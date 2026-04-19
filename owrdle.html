@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>OWrdle — keyboard smash (order doesn't matter)</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        body {
+            background: #121213;
+            font-family: 'Segoe UI', 'Clear Sans', 'Helvetica Neue', Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .game-container {
+            max-width: 500px;
+            width: 100%;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 0.5rem;
+        }
+        h1 {
+            font-size: 2.6rem;
+            font-weight: 700;
+            letter-spacing: 4px;
+            margin: 0;
+            background: linear-gradient(135deg, #f9c23c, #e6a017);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            text-shadow: 0 2px 3px rgba(0,0,0,0.2);
+        }
+        .sub {
+            color: #86888a;
+            font-size: 0.8rem;
+            margin-top: 4px;
+            letter-spacing: 0.5px;
+        }
+
+        .board {
+            display: grid;
+            grid-template-rows: repeat(6, 1fr);
+            gap: 8px;
+            background-color: #121213;
+            padding: 8px;
+            border-radius: 12px;
+        }
+        .row {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
+        }
+        .tile {
+            aspect-ratio: 1 / 1;
+            background-color: #3a3a3c;
+            border: 2px solid #3a3a3c;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: white;
+            transition: all 0.1s ease;
+            font-family: monospace;
+        }
+        .tile.filled {
+            border-color: #565758;
+            background-color: #3a3a3c;
+            animation: pop 0.1s ease;
+        }
+        /* GREEN = letter is in the solution set */
+        .tile.correct {
+            background-color: #538d4e;
+            border-color: #538d4e;
+        }
+        /* PURPLE = letter not in solution but adjacent to a solution letter (keyboard neighbor) */
+        .tile.hot {
+            background-color: #9b5fc0;
+            border-color: #b77ee0;
+            box-shadow: 0 0 2px #c084fc;
+        }
+        .tile.absent {
+            background-color: #3a3a3c;
+            border-color: #3a3a3c;
+        }
+
+        @keyframes pop {
+            0% { transform: scale(0.9); }
+            100% { transform: scale(1); }
+        }
+
+        .keyboard {
+            width: 100%;
+            margin-top: 10px;
+        }
+        .keyboard-row {
+            display: flex;
+            justify-content: center;
+            gap: 6px;
+            margin-bottom: 8px;
+        }
+        .key {
+            background-color: #818384;
+            border: none;
+            border-radius: 6px;
+            color: white;
+            font-weight: bold;
+            font-size: 1.1rem;
+            padding: 12px 0;
+            text-transform: uppercase;
+            cursor: pointer;
+            font-family: monospace;
+            flex: 1;
+            text-align: center;
+            transition: 0.07s linear;
+            min-width: 32px;
+            box-shadow: 0 1px 0 #2c2d2f;
+        }
+        .key.wide {
+            flex: 1.5;
+            font-size: 0.8rem;
+        }
+        .key:active {
+            transform: scale(0.96);
+        }
+        .key.correct {
+            background-color: #538d4e;
+        }
+        .key.hot {
+            background-color: #9b5fc0;
+        }
+        .key.absent {
+            background-color: #3a3a3c;
+        }
+
+        .message-area {
+            font-size: 0.9rem;
+            font-weight: 600;
+            padding: 8px 16px;
+            background: #1e1f22;
+            border-radius: 40px;
+            color: #d7dadc;
+            text-align: center;
+            min-height: 54px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            justify-content: center;
+            flex-wrap: wrap;
+            cursor: pointer;
+            transition: background 0.1s;
+        }
+        .message-area:hover {
+            background: #2a2b2f;
+        }
+        footer {
+            font-size: 0.7rem;
+            color: #565758;
+            text-align: center;
+            margin-top: 8px;
+        }
+        @media (max-width: 480px) {
+            .tile { font-size: 1.6rem; }
+            .key { font-size: 0.9rem; padding: 10px 0; }
+            .keyboard-row { gap: 4px; }
+            .row { gap: 5px; }
+        }
+    </style>
+</head>
+<body>
+<div class="game-container">
+    <div class="header">
+        <h1>OWRDLE</h1>
+        <div class="sub">keyboard smash · order doesn't matter · 🟩 = in set &nbsp;&nbsp; 🟪 = adjacent</div>
+    </div>
+
+    <div class="board" id="board"></div>
+
+    <div class="keyboard" id="keyboard"></div>
+
+    <div class="message-area" id="messageArea">
+        find the 5 correct letters
+    </div>
+    <footer>🟪 purple = letter is adjacent (QWERTY) to a correct letter · press ENTER to start new game after win/loss</footer>
+</div>
+
+<script>
+    // --------------------------------------------------------------
+    // QWERTY adjacency map
+    // --------------------------------------------------------------
+    const rows = [
+        "qwertyuiop",
+        "asdfghjkl",
+        "zxcvbnm"
+    ];
+    const position = new Map();
+    for (let r = 0; r < rows.length; r++) {
+        for (let c = 0; c < rows[r].length; c++) {
+            position.set(rows[r][c], { row: r, col: c });
+        }
+    }
+
+    function getAdjacentLetters(letter) {
+        const pos = position.get(letter);
+        if (!pos) return new Set();
+        const adj = new Set();
+        const dirs = [[-1,0],[1,0],[0,-1],[0,1]];
+        for (let [dr, dc] of dirs) {
+            const newRow = pos.row + dr;
+            const newCol = pos.col + dc;
+            if (newRow >= 0 && newRow < rows.length) {
+                const rowStr = rows[newRow];
+                if (newCol >= 0 && newCol < rowStr.length) {
+                    adj.add(rowStr[newCol]);
+                }
+            }
+        }
+        return adj;
+    }
+
+    // --------------------------------------------------------------
+    // Game state
+    // --------------------------------------------------------------
+    let targetLettersSet = new Set();   // the 5 correct letters (order irrelevant)
+    let targetArray = [];               // for display
+    let guesses = [];                   // array of submitted letter sets
+    let currentGuessLetters = [];       // current letters being typed (max 5, no repeats)
+    let gameOver = false;
+    let currentRow = 0;
+    let winOccurred = false;            // extra flag to prevent double-render
+    const maxGuesses = 6;
+
+    let keyStatus = new Map();   // letter -> 'correct'|'hot'|'absent'
+    let boardState = [];         // 6x5 { letter, status }
+
+    const boardContainer = document.getElementById("board");
+    const keyboardDiv = document.getElementById("keyboard");
+    const messageDiv = document.getElementById("messageArea");
+
+    const alphabet = "abcdefghijklmnopqrstuvwxyz".split("");
+
+    function generateRandomTarget() {
+        const shuffled = [...alphabet];
+        for (let i = shuffled.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        const letters = shuffled.slice(0, 5);
+        return {
+            set: new Set(letters),
+            array: [...letters]
+        };
+    }
+
+    // --------------------------------------------------------------
+    // Evaluation: ORDER DOES NOT MATTER
+    // - GREEN (correct): letter is in target set
+    // - PURPLE (hot): letter NOT in target, but adjacent to any target letter
+    // - GRAY (absent): everything else
+    // --------------------------------------------------------------
+    function evaluateGuess(guessLetters, targetSet) {
+        const result = Array(5).fill(null);
+        
+        // Build set of adjacent letters to ANY target letter
+        const adjacentSet = new Set();
+        for (let t of targetSet) {
+            const neighbors = getAdjacentLetters(t);
+            neighbors.forEach(n => adjacentSet.add(n));
+        }
+        
+        for (let i = 0; i < 5; i++) {
+            const letter = guessLetters[i];
+            if (targetSet.has(letter)) {
+                result[i] = "correct";   // green — in solution set
+            } else if (adjacentSet.has(letter)) {
+                result[i] = "hot";       // purple — adjacent to a correct letter
+            } else {
+                result[i] = "absent";
+            }
+        }
+        
+        // update global keyStatus map (priority: correct > hot > absent)
+        for (let i = 0; i < 5; i++) {
+            const letter = guessLetters[i];
+            const newStatus = result[i];
+            const currentStored = keyStatus.get(letter);
+            const priority = (s) => {
+                if (s === "correct") return 3;
+                if (s === "hot") return 2;
+                if (s === "absent") return 1;
+                return 0;
+            };
+            if (!currentStored || priority(newStatus) > priority(currentStored)) {
+                keyStatus.set(letter, newStatus);
+            }
+        }
+        
+        return result;
+    }
+    
+    // check win condition: does guessed set exactly match target set?
+    function isWinningGuess(guessLetters, targetSet) {
+        if (guessLetters.length !== 5) return false;
+        const guessSet = new Set(guessLetters);
+        if (guessSet.size !== 5) return false;
+        for (let letter of guessSet) {
+            if (!targetSet.has(letter)) return false;
+        }
+        return true;
+    }
+    
+    function submitGuess() {
+        if (gameOver) {
+            // if game is over, pressing Enter starts a new game (no button needed)
+            startNewGame();
+            return;
+        }
+        if (currentGuessLetters.length !== 5) {
+            setMessage(`Need 5 letters! (${currentGuessLetters.length}/5)`);
+            return;
+        }
+        // ensure no duplicates (already enforced by input)
+        const unique = new Set(currentGuessLetters);
+        if (unique.size !== 5) {
+            setMessage("No repeated letters allowed in a smash!");
+            return;
+        }
+        
+        const evaluation = evaluateGuess(currentGuessLetters, targetLettersSet);
+        const win = isWinningGuess(currentGuessLetters, targetLettersSet);
+        
+        // IMPORTANT: store the guess in boardState BEFORE checking win/loss conditions
+        for (let i = 0; i < 5; i++) {
+            boardState[currentRow][i] = {
+                letter: currentGuessLetters[i],
+                status: evaluation[i]
+            };
+        }
+        guesses.push([...currentGuessLetters]);
+        
+        if (win) {
+            gameOver = true;
+            winOccurred = true;
+            renderBoard();  // render with the green tiles filled
+            renderKeyboard();
+            setMessage(`You got it! The letters were ${targetArray.join('').toUpperCase()}. Press ENTER for new game.`);
+            // clear current guess so you can't add more letters
+            currentGuessLetters = [];
+            return;
+        }
+        
+        currentRow++;
+        currentGuessLetters = [];
+        
+        if (currentRow >= maxGuesses) {
+            gameOver = true;
+            winOccurred = false;
+            renderBoard();
+            renderKeyboard();
+            setMessage(`Game over. The letters were ${targetArray.join('').toUpperCase()}. Press ENTER for new game.`);
+            return;
+        }
+        
+        renderBoard();
+        renderKeyboard();
+        setMessage(`Guess recorded. ${maxGuesses - currentRow} attempts left.`);
+    }
+    
+    function addLetter(letter) {
+        if (gameOver) return;
+        if (currentGuessLetters.length >= 5) {
+            setMessage("5 letters already. Press ⏎ to submit.");
+            return;
+        }
+        if (currentGuessLetters.includes(letter)) {
+            setMessage(`"${letter.toUpperCase()}" already used — no repeats in a smash.`);
+            return;
+        }
+        currentGuessLetters.push(letter);
+        renderBoard();
+        clearTempMessage();
+    }
+    
+    function removeLastLetter() {
+        if (gameOver) return;
+        if (currentGuessLetters.length > 0) {
+            currentGuessLetters.pop();
+            renderBoard();
+            clearTempMessage();
+        }
+    }
+    
+    let messageTimeout = null;
+    function setMessage(msg, isPermanent = false) {
+        if (messageTimeout) clearTimeout(messageTimeout);
+        messageDiv.innerHTML = msg;
+        if (!isPermanent && !msg.includes("You got it") && !msg.includes("Game over") && !msg.includes("Press ENTER")) {
+            messageTimeout = setTimeout(() => {
+                if (!gameOver && messageDiv.innerHTML === msg) {
+                    if (currentGuessLetters.length === 5) {
+                        messageDiv.innerHTML = "✓ Press ⏎ to submit smash!";
+                    } else {
+                        messageDiv.innerHTML = `Enter 5 unique letters. ${currentGuessLetters.length}/5`;
+                    }
+                }
+            }, 2000);
+        }
+    }
+    
+    function clearTempMessage() {
+        if (messageTimeout) clearTimeout(messageTimeout);
+        if (!gameOver) {
+            if (currentGuessLetters.length === 5) {
+                messageDiv.innerHTML = "✓ Press ⏎ to submit smash!";
+            } else {
+                messageDiv.innerHTML = `Enter 5 unique letters. ${currentGuessLetters.length}/5`;
+            }
+        }
+    }
+    
+    // --------------------------------------------------------------
+    // Render board: properly shows winning row with all greens
+    // --------------------------------------------------------------
+    function renderBoard() {
+        boardContainer.innerHTML = "";
+        for (let row = 0; row < maxGuesses; row++) {
+            const rowDiv = document.createElement("div");
+            rowDiv.className = "row";
+            for (let col = 0; col < 5; col++) {
+                const tile = document.createElement("div");
+                tile.className = "tile";
+                let letter = "";
+                let status = null;
+                
+                // Case 1: already submitted rows (including the winning row)
+                if (row < currentRow || (gameOver && row === currentRow && winOccurred)) {
+                    const cell = boardState[row][col];
+                    if (cell && cell.letter) {
+                        letter = cell.letter;
+                        status = cell.status;
+                    }
+                } 
+                // Case 2: current active row (only if game not over and row equals currentRow)
+                else if (row === currentRow && !gameOver) {
+                    if (col < currentGuessLetters.length) {
+                        letter = currentGuessLetters[col];
+                        status = "filled";
+                    }
+                }
+                // Case 3: if game just ended with loss, no active row
+                
+                tile.textContent = letter ? letter.toUpperCase() : "";
+                if (status === "correct") tile.classList.add("correct");
+                else if (status === "hot") tile.classList.add("hot");
+                else if (status === "absent") tile.classList.add("absent");
+                else if (status === "filled") tile.classList.add("filled");
+                
+                rowDiv.appendChild(tile);
+            }
+            boardContainer.appendChild(rowDiv);
+        }
+    }
+    
+    function renderKeyboard() {
+        const layout = [
+            ["q","w","e","r","t","y","u","i","o","p"],
+            ["a","s","d","f","g","h","j","k","l"],
+            ["Enter","z","x","c","v","b","n","m","Backspace"]
+        ];
+        keyboardDiv.innerHTML = "";
+        for (let row of layout) {
+            const rowDiv = document.createElement("div");
+            rowDiv.className = "keyboard-row";
+            for (let key of row) {
+                const keyBtn = document.createElement("button");
+                if (key === "Enter") keyBtn.textContent = "✓";
+                else if (key === "Backspace") keyBtn.textContent = "⌫";
+                else keyBtn.textContent = key.toUpperCase();
+                
+                keyBtn.classList.add("key");
+                if (key === "Enter" || key === "Backspace") {
+                    keyBtn.classList.add("wide");
+                }
+                
+                if (key !== "Enter" && key !== "Backspace") {
+                    const st = keyStatus.get(key);
+                    if (st === "correct") keyBtn.classList.add("correct");
+                    else if (st === "hot") keyBtn.classList.add("hot");
+                    else if (st === "absent") keyBtn.classList.add("absent");
+                }
+                
+                keyBtn.addEventListener("click", (e) => {
+                    e.preventDefault();
+                    if (key === "Enter") {
+                        submitGuess();
+                    } else if (key === "Backspace") {
+                        removeLastLetter();
+                    } else {
+                        addLetter(key);
+                    }
+                    renderBoard();
+                    renderKeyboard();
+                });
+                rowDiv.appendChild(keyBtn);
+            }
+            keyboardDiv.appendChild(rowDiv);
+        }
+    }
+    
+    // --------------------------------------------------------------
+    // New game: fully reset everything
+    // --------------------------------------------------------------
+    function startNewGame() {
+        const targetData = generateRandomTarget();
+        targetLettersSet = targetData.set;
+        targetArray = targetData.array;
+        // console log for debugging (can be removed, but helpful)
+        console.log(`[owrdle] new target: ${targetArray.join('')}`);
+        
+        guesses = [];
+        currentGuessLetters = [];
+        gameOver = false;
+        winOccurred = false;
+        currentRow = 0;
+        keyStatus.clear();
+        boardState = Array(maxGuesses).fill().map(() => Array(5).fill().map(() => ({ letter: "", status: null })));
+        
+        renderBoard();
+        renderKeyboard();
+        setMessage("New game! Find the 5 correct letters.", false);
+        setTimeout(() => {
+            if (!gameOver) {
+                messageDiv.innerHTML = "Enter 5 unique letters. 0/5";
+            }
+        }, 100);
+    }
+    
+    // --------------------------------------------------------------
+    // Physical keyboard handler (including Enter for new game)
+    // --------------------------------------------------------------
+    function handlePhysicalKey(e) {
+        const key = e.key;
+        
+        // ENTER: submit guess if game active, otherwise start new game
+        if (key === "Enter") {
+            e.preventDefault();
+            if (gameOver) {
+                startNewGame();
+            } else {
+                submitGuess();
+                renderBoard();
+                renderKeyboard();
+            }
+            return;
+        }
+        
+        if (gameOver) return;  // no typing when game over, only Enter works
+        
+        if (key === "Backspace") {
+            e.preventDefault();
+            removeLastLetter();
+            renderBoard();
+            renderKeyboard();
+            return;
+        }
+        
+        const lowerKey = key.toLowerCase();
+        if (/^[a-z]$/.test(lowerKey)) {
+            e.preventDefault();
+            addLetter(lowerKey);
+            renderBoard();
+            renderKeyboard();
+        }
+    }
+    
+    // Click on message area also triggers new game when game over (intuitive)
+    function setupMessageClick() {
+        messageDiv.addEventListener("click", () => {
+            if (gameOver) {
+                startNewGame();
+            }
+        });
+    }
+    
+    // --------------------------------------------------------------
+    // Initialization
+    // --------------------------------------------------------------
+    function init() {
+        startNewGame();
+        window.addEventListener("keydown", handlePhysicalKey);
+        setupMessageClick();
+    }
+    
+    init();
+</script>
+</body>
+</html>
