@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>OWrdle — keyboard smash (order doesn't matter)</title>
+    <title>OWrdle - keyboard smash (order doesn't matter)</title>
     <style>
         * {
             box-sizing: border-box;
@@ -289,9 +289,9 @@
         for (let i = 0; i < 5; i++) {
             const letter = guessLetters[i];
             if (targetSet.has(letter)) {
-                result[i] = "correct";   // green — in solution set
+                result[i] = "correct";   // green - in solution set
             } else if (adjacentSet.has(letter)) {
-                result[i] = "hot";       // purple — adjacent to a correct letter
+                result[i] = "hot";       // purple - adjacent to a correct letter
             } else {
                 result[i] = "absent";
             }
@@ -391,7 +391,7 @@
             return;
         }
         if (currentGuessLetters.includes(letter)) {
-            setMessage(`"${letter.toUpperCase()}" already used — no repeats in a smash.`);
+            setMessage(`"${letter.toUpperCase()}" already used - no repeats in a smash.`);
             return;
         }
         currentGuessLetters.push(letter);
